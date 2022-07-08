@@ -2,6 +2,8 @@ workflow:
     rules:
         - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
           when: always
+        - if: $CI_PIPELINE_SOURCE == "push"
+          when: never
         # CASE I => First pipeline will run and than merge will done
         - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer" &&
               $CI_PIPELINE_SOURCE == 'merge_request_event' &&
@@ -16,6 +18,7 @@ workflow:
               $CI_PIPELINE_SOURCE == 'merge_request_event'
           when: always
 
+          
         # CASE II => First Merge will be done than pipeline will start
         # - if: $CI_COMMIT_BRANCH == "pre-prod" || $CI_COMMIT_BRANCH == "uat"
         #   when: always
@@ -26,18 +29,15 @@ workflow:
         
         
 
-        
 stages:
     # - build_test
     # - uploading_2_ec2
     - echo_hello
 variables:
-    EC2_ENDPOINT: ec2-3-94-163-66.compute-1.amazonaws.com
+    EC2_ENDPOINT: 54.235.73.92
 
 
 # building django app:
-#     # only:
-#     #     - master
 #     stage: build_test
 #     image: node:16-alpine
 #     script: 
@@ -50,11 +50,9 @@ variables:
 #         - curl http://localhost:3000 | grep "React"
 #     artifacts:
 #         paths:
-#             - "build" 
+#           - "build" 
 
 # uploading build to ec2:
-#     # only:
-#     #     - master
 #     stage: uploading_2_ec2
 #     image: alpine
 #     before_script:
@@ -63,9 +61,11 @@ variables:
 #         - apk update
 #         - apk add openssh-client
 #         - apk add openssh
-#         - apk add rsync
-#         - scp -i $SSH_UBUNTU -o StrictHostKeyChecking=no -r build/  ubuntu@$EC2_ENDPOINT:/var/www/html/
-        # - rsync -au -e "ssh -i $SSH_UBUNTU" build ubuntu@$EC2_ENDPOINT:/var/www/html/build
+#         # - apk add rsync
+#         - scp -i $SSH_UBUNTU -o StrictHostKeyChecking=no -r build/  ubuntu@$EC2_ENDPOINT:/home/ubuntu/build/
+#         # - ssh -i $SSH_UBUNTU -o StrictHostKeyChecking=no   ubuntu@$EC2_ENDPOINT "ls"
+#         # - rsync -au -e "ssh -i $SSH_UBUNTU" build ubuntu@$EC2_ENDPOINT:/var/www/html/build
+
 
 echo hello:
     stage: echo_hello
@@ -74,3 +74,4 @@ echo hello:
         - echo $CI_COMMIT_BRANCH
         - echo $CI_COMMIT_REF_NAME
         - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo $CI_PIPELINE_SOURCE
