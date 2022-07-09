@@ -1,3 +1,4 @@
+#  PIPELINE LOGIC
 workflow:
     rules:
         - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
@@ -26,52 +27,46 @@ workflow:
         # CASE III =>
         # - if: $CI_COMMIT_BRANCH == "pre-prod"  || $CI_COMMIT_BRANCH == "uat"
         # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+
+    
         
-        
-
-stages:
-    # - build_test
-    # - uploading_2_ec2
-    - echo_hello
-variables:
-    EC2_ENDPOINT: 54.235.73.92
-
-
-# building django app:
-#     stage: build_test
-#     image: node:16-alpine
-#     script: 
-#         - npm install
-#         - npm run build 
-#         - npm install -g serve
-#         - apk add curl
-#         - serve -s build &
-#         - sleep 10
-#         - curl http://localhost:3000 | grep "React"
-#     artifacts:
-#         paths:
-#           - "build" 
-
-# uploading build to ec2:
-#     stage: uploading_2_ec2
-#     image: alpine
-#     before_script:
-#         - chmod 400 $SSH_UBUNTU
-#     script:
-#         - apk update
-#         - apk add openssh-client
-#         - apk add openssh
-#         # - apk add rsync
-#         - scp -i $SSH_UBUNTU -o StrictHostKeyChecking=no -r build/  ubuntu@$EC2_ENDPOINT:/home/ubuntu/build/
-#         # - ssh -i $SSH_UBUNTU -o StrictHostKeyChecking=no   ubuntu@$EC2_ENDPOINT "ls"
-#         # - rsync -au -e "ssh -i $SSH_UBUNTU" build ubuntu@$EC2_ENDPOINT:/var/www/html/build
-
-
-echo hello:
-    stage: echo_hello
-    image: alpine
-    script:
-        - echo $CI_COMMIT_BRANCH
-        - echo $CI_COMMIT_REF_NAME
+#  Developer => When we are mergeing code from feature to Developer 
+Feature to Developer:
+  environment: development
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer"
+      when: on_success
+  image: alpine
+  script:
         - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-        - echo $CI_PIPELINE_SOURCE
+    
+#  UAT => When we are mergeing code from Developer to UAT 
+Developer to UAT:
+  environment: UAT
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+
+#  Pre-Production => When we are mergeing code from UAT to Pre-Production 
+UAT to Pre-Prod:
+  environment: Pre-Prod
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "pre-prod"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        
+#  Master/Production => When we are mergeing code from Pre-Production to Prod 
+# 
+Prod Deployment:
+  environment: Master
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
