@@ -1,3 +1,4 @@
+#  PIPELINE INFRASTRUCTURE CODE
 workflow:
     rules:
         - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
@@ -23,55 +24,147 @@ workflow:
         # - if: $CI_COMMIT_BRANCH == "pre-prod" || $CI_COMMIT_BRANCH == "uat"
         #   when: always
 
-        # CASE III =>
+        # CASE III 
         # - if: $CI_COMMIT_BRANCH == "pre-prod"  || $CI_COMMIT_BRANCH == "uat"
         # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-        
-        
+
 
 stages:
-    # - build_test
-    # - uploading_2_ec2
-    - echo_hello
-variables:
-    EC2_ENDPOINT: 54.235.73.92
-
-
-# building django app:
-#     stage: build_test
-#     image: node:16-alpine
-#     script: 
-#         - npm install
-#         - npm run build 
-#         - npm install -g serve
-#         - apk add curl
-#         - serve -s build &
-#         - sleep 10
-#         - curl http://localhost:3000 | grep "React"
-#     artifacts:
-#         paths:
-#           - "build" 
-
-# uploading build to ec2:
-#     stage: uploading_2_ec2
-#     image: alpine
-#     before_script:
-#         - chmod 400 $SSH_UBUNTU
-#     script:
-#         - apk update
-#         - apk add openssh-client
-#         - apk add openssh
-#         # - apk add rsync
-#         - scp -i $SSH_UBUNTU -o StrictHostKeyChecking=no -r build/  ubuntu@$EC2_ENDPOINT:/home/ubuntu/build/
-#         # - ssh -i $SSH_UBUNTU -o StrictHostKeyChecking=no   ubuntu@$EC2_ENDPOINT "ls"
-#         # - rsync -au -e "ssh -i $SSH_UBUNTU" build ubuntu@$EC2_ENDPOINT:/var/www/html/build
-
-
-echo hello:
-    stage: echo_hello
-    image: alpine
-    script:
-        - echo $CI_COMMIT_BRANCH
-        - echo $CI_COMMIT_REF_NAME
+  - "lint-check" 
+  - "code-review" 
+  - "code-deploy"
+  - "end" 
+        
+# Feature to Developer  =>  merge code from feature|release|bugfix to Developer 
+Feature to Developer [list-check]:
+  stage: lint-check
+  environment: development
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer"
+      when: on_success
+  image: alpine
+  script:
         - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-        - echo $CI_PIPELINE_SOURCE
+        - echo "lint-check"
+Feature to Developer [code-review]:
+  stage: code-review
+  environment: development
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "code-review"
+Feature to Developer [code-deploy]:
+  stage: code-deploy
+  environment: development
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "code-deploy"
+Feature to Developer [end]:
+  stage: end
+  environment: development
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "developer"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "end"
+    
+# Developer to UAT =>  mergecode from Developer to UAT 
+Developer to UAT [lint-test]:
+  stage: lint-check
+  environment: UAT
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "lint-test"
+Developer to UAT [code-review]:
+  stage: code-review
+  environment: UAT
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "code-review"
+Developer to UAT [code-deploy]:
+  stage: code-deploy
+  environment: UAT
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "uat"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        - echo "code-deploy"
+
+#  UAT to Pre-Prod =>  merge code from UAT to Pre-Production 
+UAT to Pre-Prod[lint-check]:
+  stage: lint-check
+  environment: Pre-Prod
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "pre-prod"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+UAT to Pre-Prod[code-review]:
+  stage: code-review
+  environment: Pre-Prod
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "pre-prod"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+UAT to Pre-Prod[code-deploy]:
+  stage: code-deploy
+  environment: Pre-Prod
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "pre-prod"
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        
+#  Prod Deployment => mergeing code from pre-prod to prod/master, no pipeline will run.
+#  Pipeline will run only when we create a new Tags on master branch.
+Prod Deployment[lint-check]:
+  stage: lint-check
+  environment: Master
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+Prod Deployment[code-review]:
+  stage: code-review
+  environment: Master
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+Prod Deployment[code-deploy]:
+  stage: code-deploy
+  environment: Master
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^RT-\d+.\d+.\d+$/
+      when: on_success
+  image: alpine
+  script:
+        - echo $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+
